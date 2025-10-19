@@ -1,0 +1,46 @@
+# Environment variables (contains API keys - NEVER COMMIT!)
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# Log files (contains customer data - generated at runtime)
+logs/*.jsonl
+
+# Virtual environment
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+*.bak
+
+# Test files (not needed in repo)
+test_*.py
+*_test.py
+
+# Temporary files
+*.tmp
+*.log
