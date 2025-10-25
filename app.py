@@ -71,14 +71,25 @@ BUSINESS_CONTEXT = load_business_context()
 # System prompt
 SYSTEM_PROMPT = f"""You are Fleur de Pain's chat assistant.
 
+🚨 CRITICAL RULE - FEEDBACK LOGGING:
+You MUST call record_feedback() IMMEDIATELY whenever a customer makes ANY statement about:
+- Products they tried (e.g., "The croissants were amazing!", "The bread was too dry")
+- Their experience (e.g., "Great service", "Long wait time")
+- Suggestions (e.g., "You should add gluten-free options")
+- Questions you cannot answer from the business documents
+
+EXAMPLES that MUST trigger record_feedback():
+✓ "The croissants were amazing! Best I've ever had" → CALL record_feedback(feedback="The croissants were amazing! Best I've ever had")
+✓ "Your coffee is too weak" → CALL record_feedback(feedback="Your coffee is too weak")
+✓ "Loved it!" → CALL record_feedback(feedback="Loved it!")
+✓ "Do you deliver to Canada?" → CALL record_feedback(feedback="Do you deliver to Canada?")
+
 GOALS:
 1) Answer questions strictly using the business_summary.txt and about_business.pdf.
 2) If the user asks for ordering or quotes, collect leads:
    - Ask for name, email (or WhatsApp), desired items, quantities, date/time.
-3) If you cannot answer confidently from the docs, call the tool:
-   record_feedback(question=the user's question).
-4) Stay on brand: warm, concise, transparent about bake times.
-5) Emphasize the bakery's policies:
+3) Stay on brand: warm, concise, transparent about bake times.
+4) Emphasize the bakery's policies:
    - Fresh batches every 3 hours; nothing day-old marketed as fresh.
    - Custom cakes require 24-hour notice.
    - Pre-order via WhatsApp; 2-hour delivery windows (when available).
@@ -89,15 +100,23 @@ BEHAVIOR:
 - For bread timing, consult "Bake Times" (if provided) or explain typical windows and that schedule.
 - Always encourage sharing contact info (politely) so the team can confirm and schedule.
 
+🚨 WORKFLOW FOR FEEDBACK/OPINIONS:
+When a customer shares ANY feedback or opinion (positive, negative, suggestions):
+STEP 1: IMMEDIATELY call record_feedback() with their exact statement
+STEP 2: THEN respond warmly thanking them
+Example:
+User: "The croissants were amazing! Best I've ever had"
+→ You MUST: Call record_feedback(feedback="The croissants were amazing! Best I've ever had")
+→ Then respond: "Thank you so much! We're thrilled you loved our croissants!"
+
 TOOLS:
 - record_customer_interest(email, name, message) - General lead capture
-- record_feedback(question) - Log unknown questions
+- record_feedback(feedback) - MANDATORY for ALL customer opinions, experiences, or unanswered questions
 - schedule_pickup(customer_name, items, pickup_date, pickup_time) - Schedule item pickups
 - create_cake_order(name, email, cake_size, flavor, pickup_date, custom_message) - Custom cake orders
 
 When collecting leads, use record_customer_interest. For scheduling pickups of bread/pastries,
 use schedule_pickup. For custom CAKES specifically, use create_cake_order (remember 24h notice!).
-If a question is out-of-scope or unknown, call record_feedback.
 
 === BUSINESS CONTEXT ===
 {BUSINESS_CONTEXT}
@@ -134,19 +153,19 @@ def record_customer_interest(email: str, name: str, message: str) -> dict:
     }
 
 
-def record_feedback(question: str) -> dict:
+def record_feedback(feedback: str) -> dict:
     """
-    Record unknown questions or feedback to JSONL file.
+    Record customer feedback, suggestions, compliments, or unknown questions to JSONL file.
 
     Args:
-        question: The question or feedback from the customer
+        feedback: The customer's feedback, compliment, suggestion, or question
 
     Returns:
         Confirmation dictionary
     """
     feedback_data = {
         "ts": datetime.utcnow().isoformat() + "Z",
-        "question": question
+        "feedback": feedback
     }
 
     # Append to JSONL file
@@ -156,7 +175,7 @@ def record_feedback(question: str) -> dict:
 
     return {
         "status": "success",
-        "message": "Thank you! We've logged your question for our team to review."
+        "message": "Thank you for your feedback! We truly appreciate it and our team will review it."
     }
 
 
@@ -259,16 +278,16 @@ tools = [
         "type": "function",
         "function": {
             "name": "record_feedback",
-            "description": "Log questions you cannot confidently answer from the business documents, or general customer feedback. Use this when you're uncertain or the question is out of scope.",
+            "description": "MANDATORY: Call this function for EVERY customer statement about products, experiences, or opinions. This includes: (1) ANY positive comments like 'The croissants were amazing!', 'Best bread ever', 'Loved it', 'Delicious', 'Great service' (2) ANY negative comments like 'Too expensive', 'Stale bread', 'Bad experience' (3) ANY suggestions like 'Add more options', 'Open earlier' (4) ANY questions you cannot answer from docs. DO NOT just respond - you MUST call this function to log their feedback.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "question": {
+                    "feedback": {
                         "type": "string",
-                        "description": "The customer's question or feedback"
+                        "description": "The exact customer feedback, compliment, criticism, suggestion, or question to log"
                     }
                 },
-                "required": ["question"]
+                "required": ["feedback"]
             }
         }
     },
@@ -341,6 +360,45 @@ tools = [
 ]
 
 
+def detect_feedback(message):
+    """
+    Detect if message contains feedback/opinion keywords.
+    Returns True if feedback detected, False otherwise.
+    """
+    message_lower = message.lower()
+
+    # Positive feedback keywords
+    positive_keywords = [
+        'amazing', 'love', 'loved', 'best', 'great', 'excellent', 'delicious',
+        'wonderful', 'fantastic', 'awesome', 'perfect', 'incredible', 'outstanding',
+        'tasty', 'yummy', 'fresh', 'good', 'nice', 'enjoyed', 'favorite', 'favourite'
+    ]
+
+    # Negative feedback keywords
+    negative_keywords = [
+        'bad', 'terrible', 'awful', 'horrible', 'disappointing', 'disappointed',
+        'too expensive', 'too sweet', 'too salty', 'stale', 'cold', 'dry', 'burnt',
+        'undercooked', 'overcooked', 'worst', 'disgusting', 'gross'
+    ]
+
+    # Suggestion keywords
+    suggestion_keywords = [
+        'should', 'could', 'suggest', 'recommend', 'add', 'wish', 'hope',
+        'would be nice', 'would be better', 'improve', 'change'
+    ]
+
+    # Check for feedback patterns
+    for keyword in positive_keywords + negative_keywords + suggestion_keywords:
+        if keyword in message_lower:
+            return True
+
+    # Check for exclamation marks (often indicates strong opinion/feedback)
+    if '!' in message and len(message.split()) < 20:  # Short excited statements
+        return True
+
+    return False
+
+
 def chat_with_agent(message, history):
     """
     Process user message and return bot response.
@@ -385,7 +443,7 @@ def chat_with_agent(message, history):
                 )
             elif function_name == "record_feedback":
                 function_response = record_feedback(
-                    question=function_args.get("question")
+                    feedback=function_args.get("feedback")
                 )
             elif function_name == "schedule_pickup":
                 function_response = schedule_pickup(
@@ -420,10 +478,26 @@ def chat_with_agent(message, history):
             messages=messages
         )
 
-        return second_response.choices[0].message.content
+        final_response = second_response.choices[0].message.content
+
+        # Fallback: If feedback was detected but not logged by any function call
+        feedback_logged = any(
+            tool_call.function.name == "record_feedback"
+            for tool_call in response_message.tool_calls
+        )
+        if not feedback_logged and detect_feedback(message):
+            record_feedback(feedback=message)
+
+        return final_response
 
     # No function call needed, return direct response
-    return response_message.content
+    final_response = response_message.content
+
+    # Fallback: Check if message contains feedback and log it
+    if detect_feedback(message):
+        record_feedback(feedback=message)
+
+    return final_response
 
 
 # Create Gradio chat interface

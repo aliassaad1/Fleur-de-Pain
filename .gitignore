@@ -44,3 +44,19 @@ test_*.py
 # Temporary files
 *.tmp
 *.log
+nul
+
+# Video files
+*.mp4
+*.avi
+*.mov
+
+# Generated documentation
+C4_Reflection.pdf
+C4_Reflection.html
+
+# Chromium/browser downloads
+.pyppeteer/
+
+# Temporary conversion scripts
+convert_to_pdf.py

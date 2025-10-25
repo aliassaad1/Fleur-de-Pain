@@ -1,0 +1,23 @@
+# Core Dependencies
+openai>=1.12.0
+python-dotenv>=1.0.0
+PyPDF2>=3.0.0
+
+# LangGraph Framework
+langgraph>=0.0.20
+langchain>=0.1.0
+langchain-openai>=0.0.2
+
+# Data Processing
+pandas>=2.0.0
+
+# Jupyter & Notebook
+jupyter>=1.0.0
+notebook>=7.0.0
+ipykernel>=6.25.0
+
+# Optional: Gradio for UI Demo
+gradio>=4.19.0
+
+# PDF Export
+nbconvert>=7.0.0
