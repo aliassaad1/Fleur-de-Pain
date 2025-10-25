@@ -302,4 +302,3 @@ Ali Assaad - AUB Student
 
 ---
 
-**⭐ If this helps you understand ReAct agents, please star the repository!**
