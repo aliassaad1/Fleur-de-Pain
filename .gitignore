@@ -51,8 +51,7 @@ nul
 *.avi
 *.mov
 
-# Generated documentation
-C4_Reflection.pdf
+# Generated documentation (temporary HTML version)
 C4_Reflection.html
 
 # Chromium/browser downloads
