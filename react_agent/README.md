@@ -99,17 +99,6 @@ Run all cells to:
 - Execute experiments with different configurations
 - View the reflection and results
 
-### 4. Export Reflection to PDF
-
-**Option A - Jupyter Menu:**
-```
-File → Save and Export Notebook As → PDF
-```
-
-**Option B - Command Line:**
-```bash
-jupyter nbconvert --to pdf app.ipynb --output C4_Reflection.pdf
-```
 
 ## Architecture
 
